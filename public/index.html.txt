@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Vault</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="vault-container">
+    <div class="vault" id="vault">
+      <!-- Locked State -->
+      <div class="lock-screen" id="lockScreen">
+        <div class="lock-icon">🔒</div>
+        <h1>Digital Vault</h1>
+        <p>Your content will be revealed in:</p>
+        <div class="countdown" id="countdown">
+          <span class="time" id="hours">--</span>:
+          <span class="time" id="minutes">--</span>:
+          <span class="time" id="seconds">--</span>
+        </div>
+        <p class="message">Server time verification in progress...</p>
+      </div>
+
+      <!-- Unlocked State -->
+      <div class="video-container" id="videoContainer">
+        <video id="vaultVideo" controls preload="metadata" disablePictureInPicture>
+          Your browser doesn't support video.
+        </video>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
