@@ -1,7 +1,6 @@
 export default function handler(req, res) {
-    // CURRENT TIME IS: 2026-05-11 23:10
-    // 12 HOURS FROM NOW IS: 2026-05-12 11:10 AM
-    const RELEASE_DATE = new Date("2026-05-11T23:32:00").getTime(); 
+    // UPDATED TEST TIME: May 11, 2026, at 11:30:00 PM
+    const RELEASE_DATE = new Date("2026-05-11T23:30:00").getTime(); 
     const now = Date.now();
     const timeLeft = Math.max(0, RELEASE_DATE - now);
 
