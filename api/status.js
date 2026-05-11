@@ -1,14 +1,11 @@
 export default function handler(req, res) {
-    // Set your release date here (Format: YYYY-MM-DDTHH:MM:SS)
-    // Example: May 12, 2026, at 11:00 AM
-    const RELEASE_DATE = new Date("2026-05-12T11:00:00").getTime(); 
-    
+    // CURRENT TIME IS: 2026-05-11 23:10
+    // 12 HOURS FROM NOW IS: 2026-05-12 11:10 AM
+    const RELEASE_DATE = new Date("2026-05-12T11:10:00").getTime(); 
     const now = Date.now();
     const timeLeft = Math.max(0, RELEASE_DATE - now);
 
-    // Set CORS headers so your frontend can talk to this API
     res.setHeader('Access-Control-Allow-Origin', '*');
-    
     res.status(200).json({
         released: timeLeft === 0,
         timeLeft: timeLeft
