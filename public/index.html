@@ -3,47 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Locked Content</title>
+    <title>Exclusive Video Vault</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; overflow-x: hidden; }
+        .container { text-align: center; width: 90%; max-width: 850px; }
         
-        .container { text-align: center; width: 90%; max-width: 800px; }
-        
-        /* The Video Vault Look */
-        .video-wrapper { position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #000; border: 2px solid #333; transition: border-color 0.5s; }
-        .video-wrapper.unlocked { border-color: #00ff88; box-shadow: 0 0 20px rgba(0, 255, 136, 0.3); }
+        /* Video Container Styling */
+        .video-wrapper { position: relative; width: 100%; aspect-ratio: 16/9; border-radius: 15px; overflow: hidden; background: #000; border: 2px solid #222; transition: all 0.8s ease; }
+        .unlocked { border-color: #00ff88; box-shadow: 0 0 30px rgba(0, 255, 136, 0.2); }
 
-        video { width: 100%; display: block; filter: blur(5px); pointer-events: none; }
+        video { width: 100%; height: 100%; filter: blur(15px); pointer-events: none; transition: filter 1s ease; }
         .unlocked video { filter: blur(0); pointer-events: auto; }
 
-        /* The "Locked" Overlay */
-        #overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.6); display: flex; flex-direction: column;
-            align-items: center; justify-content: center; z-index: 10; transition: opacity 0.5s;
-        }
-        .hidden { opacity: 0; pointer-events: none; }
+        /* Lock Overlay */
+        #overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.7); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; opacity: 1; transition: opacity 0.8s ease; }
+        .hidden { opacity: 0 !important; pointer-events: none; }
 
-        #timer { font-size: 2.5rem; font-family: monospace; color: #ff3e3e; margin: 10px 0; }
-        .lock-icon { font-size: 4rem; margin-bottom: 10px; }
+        #timer { font-size: clamp(2rem, 8vw, 4rem); font-family: monospace; color: #00ff88; text-shadow: 0 0 10px rgba(0, 255, 136, 0.5); margin: 20px 0; }
+        .lock-icon { font-size: 5rem; animation: pulse 2s infinite; }
         
-        h1 { margin-bottom: 0.5rem; letter-spacing: 2px; }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        h1 { font-weight: 300; letter-spacing: 4px; color: #aaa; margin-bottom: 2rem; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>EXCLUSIVE RELEASE</h1>
+        <h1>PREMIUM CONTENT RELEASE</h1>
         
         <div class="video-wrapper" id="vault">
             <div id="overlay">
                 <div class="lock-icon">🔒</div>
-                <div id="timer">00:00:00:00</div>
-                <p>ACCESS RESTRICTED</p>
+                <div id="timer">00:00:00</div>
+                <p style="color: #666; letter-spacing: 2px;">ENCRYPTED ACCESS ONLY</p>
             </div>
 
             <video id="myVideo" controlsList="nodownload">
-                Your browser does not support the video tag.
+                <p>Your browser doesn't support HTML5 video.</p>
             </video>
         </div>
     </div>
@@ -55,45 +51,48 @@
         const videoPlayer = document.getElementById('myVideo');
 
         async function init() {
-            const res = await fetch('/api/status');
-            const data = await res.json();
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
 
-            if (data.released) {
-                unlock();
-            } else {
-                startCountdown(data.timeLeft);
+                if (data.released) {
+                    unlockVideo();
+                } else {
+                    startCountdown(data.timeLeft);
+                }
+            } catch (err) {
+                timerDisplay.innerText = "OFFLINE";
+                console.error("API Error:", err);
             }
         }
 
         function startCountdown(ms) {
             let remaining = ms;
-            const update = () => {
+            const interval = setInterval(() => {
                 remaining -= 1000;
                 if (remaining <= 0) {
-                    unlock();
+                    clearInterval(interval);
+                    unlockVideo();
                 } else {
                     const h = Math.floor(remaining / 3600000).toString().padStart(2, '0');
                     const m = Math.floor((remaining % 3600000) / 60000).toString().padStart(2, '0');
                     const s = Math.floor((remaining % 60000) / 1000).toString().padStart(2, '0');
                     timerDisplay.innerText = `${h}:${m}:${s}`;
-                    setTimeout(update, 1000);
                 }
-            };
-            update();
+            }, 1000);
         }
 
-        async function unlock() {
-            // Fetch the real source only when time is up
+        async function unlockVideo() {
             const res = await fetch('/api/video-link');
             if (res.ok) {
                 const data = await res.json();
                 videoPlayer.src = data.url;
-                videoPlayer.controls = true; // Enable controls
+                videoPlayer.load();
                 
+                // Visual transitions
                 overlay.classList.add('hidden');
                 vault.classList.add('unlocked');
-                timerDisplay.innerText = "UNLOCKED";
-                timerDisplay.style.color = "#00ff88";
+                videoPlayer.controls = true;
             }
         }
 
