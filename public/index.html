@@ -3,243 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Release Countdown</title>
+    <title>Exclusive Video Reveal</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-        }
-        .container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 40px;
-            text-align: center;
-            max-width: 500px;
-            width: 90%;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-        }
-        h1 {
-            font-size: 2.5em;
-            margin-bottom: 20px;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .countdown {
-            font-size: 4em;
-            font-weight: bold;
-            margin: 30px 0;
-            background: linear-gradient(45deg, #ff9a9e, #fecfef);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .status {
-            font-size: 1.2em;
-            margin: 20px 0;
-            padding: 15px;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.2);
-        }
-        .released {
-            background: rgba(46, 204, 113, 0.5);
-            animation: pulse 2s infinite;
-        }
-        .canceled {
-            background: rgba(231, 76, 60, 0.5);
-        }
-        .countdown-ended {
-            font-size: 2em;
-            color: #2ecc71;
-        }
-        .controls {
-            margin-top: 30px;
-        }
-        button {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
-            border: none;
-            color: white;
-            padding: 15px 30px;
-            font-size: 1.1em;
-            border-radius: 50px;
-            cursor: pointer;
-            margin: 10px;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
-        button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
-        }
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-        .file-input-wrapper {
-            position: relative;
-            display: inline-block;
-            margin: 10px;
-        }
-        .file-input-wrapper input[type=file] {
-            position: absolute;
-            left: -9999px;
-        }
-        .watch-video {
-            background: linear-gradient(45deg, #2ecc71, #27ae60) !important;
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #121212; color: white; }
+        #timer { font-size: 3rem; font-weight: bold; margin-bottom: 20px; color: #00ff88; }
+        #video-container { display: none; width: 80%; max-width: 800px; }
+        video { width: 100%; border-radius: 8px; box-shadow: 0 0 20px rgba(0,255,136,0.2); }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎥 Video Release</h1>
-        <div id="status" class="status">Loading...</div>
-        <div id="countdown" class="countdown" style="display: none;"></div>
-        
-        <div class="controls" id="adminControls" style="display: none;">
-            <div class="file-input-wrapper">
-                <input type="file" id="videoFile" accept="video/*">
-                <button onclick="document.getElementById('videoFile').click()">📁 Upload Video</button>
-            </div>
-            <button id="scheduleBtn" onclick="scheduleRelease()">⏰ Schedule 12h Release</button>
-            <button id="cancelBtn" onclick="cancelRelease()" style="display: none;">❌ Cancel Release</button>
-        </div>
-        
-        <div id="watchContainer" style="display: none;">
-            <button class="watch-video" onclick="watchVideo()">▶️ Watch Video Now</button>
-        </div>
+
+    <div id="countdown-wrapper">
+        <h2>Video Unlocks In:</h2>
+        <div id="timer">Loading...</div>
+    </div>
+
+    <div id="video-container">
+        <video id="myVideo" controls>
+            Your browser does not support the video tag.
+        </video>
     </div>
 
     <script>
-        let countdownInterval;
-        let scheduledTime = 0;
+        const timerDisplay = document.getElementById('timer');
+        const videoContainer = document.getElementById('video-container');
+        const countdownWrapper = document.getElementById('countdown-wrapper');
+        const videoPlayer = document.getElementById('myVideo');
 
-        async function updateStatus() {
-            try {
-                const response = await fetch('/api/status');
-                const data = await response.json();
-                
-                const statusEl = document.getElementById('status');
-                const countdownEl = document.getElementById('countdown');
-                const adminControls = document.getElementById('adminControls');
-                const watchContainer = document.getElementById('watchContainer');
-                const scheduleBtn = document.getElementById('scheduleBtn');
-                const cancelBtn = document.getElementById('cancelBtn');
-                
-                if (data.released) {
-                    statusEl.textContent = '🎉 VIDEO RELEASED!';
-                    statusEl.className = 'status released';
-                    countdownEl.style.display = 'none';
-                    adminControls.style.display = 'none';
-                    watchContainer.style.display = 'block';
-                    clearInterval(countdownInterval);
-                } else if (data.canceled) {
-                    statusEl.textContent = '❌ Release Canceled';
-                    statusEl.className = 'status canceled';
-                    countdownEl.style.display = 'none';
-                    adminControls.style.display = 'block';
-                    scheduleBtn.style.display = 'inline-block';
-                    cancelBtn.style.display = 'none';
-                    watchContainer.style.display = 'none';
-                    clearInterval(countdownInterval);
-                } else if (data.timeLeft > 0) {
-                    statusEl.textContent = `⏳ Video releases in:`;
-                    statusEl.className = 'status';
-                    countdownEl.style.display = 'block';
-                    adminControls.style.display = 'block';
-                    scheduleBtn.style.display = data.scheduledTime ? 'none' : 'inline-block';
-                    cancelBtn.style.display = data.scheduledTime ? 'inline-block' : 'none';
-                    watchContainer.style.display = 'none';
-                    
-                    updateCountdown(data.timeLeft);
-                } else {
-                    statusEl.textContent = 'No video scheduled';
-                    statusEl.className = 'status';
-                    countdownEl.style.display = 'none';
-                    adminControls.style.display = 'block';
-                    scheduleBtn.style.display = 'inline-block';
-                    cancelBtn.style.display = 'none';
-                    watchContainer.style.display = 'none';
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('status').textContent = 'Error loading status';
+        async function checkStatus() {
+            const response = await fetch('/api/status');
+            const data = await response.json();
+
+            if (data.released) {
+                revealVideo();
+            } else {
+                startCountdown(data.timeLeft);
             }
         }
 
-        function updateCountdown(timeLeft) {
-            const hours = Math.floor(timeLeft / (1000 * 60 * 60));
-            const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+        function startCountdown(ms) {
+            let remaining = ms;
             
-            document.getElementById('countdown').textContent = 
-                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        }
-
-        async function scheduleRelease() {
-            const videoFile = document.getElementById('videoFile').files[0];
-            if (!videoFile) {
-                alert('Please select a video file first!');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('video', videoFile);
-
-            try {
-                const response = await fetch('/api/schedule', {
-                    method: 'POST',
-                    body: JSON.stringify({ videoPath: videoFile.name }),
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                const result = await response.json();
-                if (result.success) {
-                    alert('✅ Video scheduled for release in 12 hours!');
-                    // Note: In production, you'd actually upload the file here
-                    updateStatus();
+            const interval = setInterval(() => {
+                remaining -= 1000;
+                if (remaining <= 0) {
+                    clearInterval(interval);
+                    revealVideo();
+                } else {
+                    const hours = Math.floor(remaining / 3600000);
+                    const minutes = Math.floor((remaining % 3600000) / 60000);
+                    const seconds = Math.floor((remaining % 60000) / 1000);
+                    timerDisplay.innerText = `${hours}h ${minutes}m ${seconds}s`;
                 }
-            } catch (error) {
-                alert('Error scheduling release');
+            }, 1000);
+        }
+
+        async function revealVideo() {
+            const response = await fetch('/api/video-link');
+            if (response.ok) {
+                const data = await response.json();
+                videoPlayer.src = data.url;
+                countdownWrapper.classList.add('hidden');
+                videoContainer.style.display = 'block';
             }
         }
 
-        async function cancelRelease() {
-            if (confirm('Are you sure you want to cancel the release?')) {
-                try {
-                    const response = await fetch('/api/cancel', { method: 'POST' });
-                    const result = await response.json();
-                    if (result.success) {
-                        alert('✅ Release canceled!');
-                        updateStatus();
-                    }
-                } catch (error) {
-                    alert('Error canceling release');
-                }
-            }
-        }
-
-        async function watchVideo() {
-            window.open('/video', '_blank');
-        }
-
-        // Auto-update every second
-        setInterval(updateStatus, 1000);
-        updateStatus(); // Initial load
+        checkStatus();
     </script>
 </body>
 </html>
