@@ -1,5 +1,5 @@
 export default function handler(req, res) {
-    const RELEASE_DATE = new Date("2026-05-12T11:10:00").getTime();
+    const RELEASE_DATE = new Date("2026-05-11T23:32:00").getTime();
     const now = Date.now();
 
     res.setHeader('Access-Control-Allow-Origin', '*');
