@@ -3,40 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exclusive Video Reveal</title>
+    <title>Locked Content</title>
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #121212; color: white; }
-        #timer { font-size: 3rem; font-weight: bold; margin-bottom: 20px; color: #00ff88; }
-        #video-container { display: none; width: 80%; max-width: 800px; }
-        video { width: 100%; border-radius: 8px; box-shadow: 0 0 20px rgba(0,255,136,0.2); }
-        .hidden { display: none; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        
+        .container { text-align: center; width: 90%; max-width: 800px; }
+        
+        /* The Video Vault Look */
+        .video-wrapper { position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #000; border: 2px solid #333; transition: border-color 0.5s; }
+        .video-wrapper.unlocked { border-color: #00ff88; box-shadow: 0 0 20px rgba(0, 255, 136, 0.3); }
+
+        video { width: 100%; display: block; filter: blur(5px); pointer-events: none; }
+        .unlocked video { filter: blur(0); pointer-events: auto; }
+
+        /* The "Locked" Overlay */
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 10; transition: opacity 0.5s;
+        }
+        .hidden { opacity: 0; pointer-events: none; }
+
+        #timer { font-size: 2.5rem; font-family: monospace; color: #ff3e3e; margin: 10px 0; }
+        .lock-icon { font-size: 4rem; margin-bottom: 10px; }
+        
+        h1 { margin-bottom: 0.5rem; letter-spacing: 2px; }
     </style>
 </head>
 <body>
 
-    <div id="countdown-wrapper">
-        <h2>Video Unlocks In:</h2>
-        <div id="timer">Loading...</div>
-    </div>
+    <div class="container">
+        <h1>EXCLUSIVE RELEASE</h1>
+        
+        <div class="video-wrapper" id="vault">
+            <div id="overlay">
+                <div class="lock-icon">🔒</div>
+                <div id="timer">00:00:00:00</div>
+                <p>ACCESS RESTRICTED</p>
+            </div>
 
-    <div id="video-container">
-        <video id="myVideo" controls>
-            Your browser does not support the video tag.
-        </video>
+            <video id="myVideo" controlsList="nodownload">
+                Your browser does not support the video tag.
+            </video>
+        </div>
     </div>
 
     <script>
         const timerDisplay = document.getElementById('timer');
-        const videoContainer = document.getElementById('video-container');
-        const countdownWrapper = document.getElementById('countdown-wrapper');
+        const overlay = document.getElementById('overlay');
+        const vault = document.getElementById('vault');
         const videoPlayer = document.getElementById('myVideo');
 
-        async function checkStatus() {
-            const response = await fetch('/api/status');
-            const data = await response.json();
+        async function init() {
+            const res = await fetch('/api/status');
+            const data = await res.json();
 
             if (data.released) {
-                revealVideo();
+                unlock();
             } else {
                 startCountdown(data.timeLeft);
             }
@@ -44,32 +67,37 @@
 
         function startCountdown(ms) {
             let remaining = ms;
-            
-            const interval = setInterval(() => {
+            const update = () => {
                 remaining -= 1000;
                 if (remaining <= 0) {
-                    clearInterval(interval);
-                    revealVideo();
+                    unlock();
                 } else {
-                    const hours = Math.floor(remaining / 3600000);
-                    const minutes = Math.floor((remaining % 3600000) / 60000);
-                    const seconds = Math.floor((remaining % 60000) / 1000);
-                    timerDisplay.innerText = `${hours}h ${minutes}m ${seconds}s`;
+                    const h = Math.floor(remaining / 3600000).toString().padStart(2, '0');
+                    const m = Math.floor((remaining % 3600000) / 60000).toString().padStart(2, '0');
+                    const s = Math.floor((remaining % 60000) / 1000).toString().padStart(2, '0');
+                    timerDisplay.innerText = `${h}:${m}:${s}`;
+                    setTimeout(update, 1000);
                 }
-            }, 1000);
+            };
+            update();
         }
 
-        async function revealVideo() {
-            const response = await fetch('/api/video-link');
-            if (response.ok) {
-                const data = await response.json();
+        async function unlock() {
+            // Fetch the real source only when time is up
+            const res = await fetch('/api/video-link');
+            if (res.ok) {
+                const data = await res.json();
                 videoPlayer.src = data.url;
-                countdownWrapper.classList.add('hidden');
-                videoContainer.style.display = 'block';
+                videoPlayer.controls = true; // Enable controls
+                
+                overlay.classList.add('hidden');
+                vault.classList.add('unlocked');
+                timerDisplay.innerText = "UNLOCKED";
+                timerDisplay.style.color = "#00ff88";
             }
         }
 
-        checkStatus();
+        init();
     </script>
 </body>
 </html>
