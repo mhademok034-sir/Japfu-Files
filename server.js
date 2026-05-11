@@ -1,111 +1,35 @@
 const express = require('express');
-const fs = require('fs').promises;
 const path = require('path');
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
+// Set the release time: Current time + 12 hours
+// For a specific date, use: new Date('2024-12-31T12:00:00Z').getTime()
+const RELEASE_TIME = Date.now() + (12 * 60 * 60 * 1000);
+
 app.use(express.static('public'));
-app.use('/videos', express.static('videos'));
 
-const DATA_FILE = 'release_data.json';
-
-// Initialize data file if it doesn't exist
-async function initData() {
-    try {
-        await fs.access(DATA_FILE);
-    } catch {
-        await fs.writeFile(DATA_FILE, JSON.stringify({
-            scheduled: null,
-            canceled: false,
-            videoPath: ''
-        }, null, 2));
-    }
-}
-
-initData();
-
-// Middleware to check if video is released
-async function checkReleaseStatus(req, res, next) {
-    const data = await loadData();
+// Endpoint to check time remaining
+app.get('/api/status', (req, res) => {
     const now = Date.now();
-    
-    if (data.scheduled && now >= data.scheduled && !data.canceled) {
-        // Video is released
-        res.locals.released = true;
-    } else if (data.canceled) {
-        res.locals.released = false;
-        res.locals.canceled = true;
-    } else {
-        res.locals.released = false;
-    }
-    next();
-}
-
-// Load data from file
-async function loadData() {
-    const data = await fs.readFile(DATA_FILE, 'utf8');
-    return JSON.parse(data);
-}
-
-// Save data to file
-async function saveData(data) {
-    await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2));
-}
-
-app.get('/api/status', checkReleaseStatus, async (req, res) => {
-    const data = await loadData();
-    const now = Date.now();
-    
+    const timeLeft = Math.max(0, RELEASE_TIME - now);
     res.json({
-        released: res.locals.released,
-        canceled: res.locals.canceled,
-        timeLeft: data.scheduled ? Math.max(0, data.scheduled - now) : 0,
-        scheduledTime: data.scheduled,
-        videoPath: data.videoPath
+        released: timeLeft === 0,
+        timeLeft: timeLeft // returns milliseconds
     });
 });
 
-app.post('/api/schedule', async (req, res) => {
-    try {
-        const { videoPath } = req.body;
-        const scheduledTime = Date.now() + 12 * 60 * 60 * 1000; // 12 hours
-        
-        const data = await loadData();
-        data.scheduled = scheduledTime;
-        data.canceled = false;
-        data.videoPath = videoPath;
-        await saveData(data);
-        
-        res.json({ success: true, scheduledTime });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/cancel', async (req, res) => {
-    try {
-        const data = await loadData();
-        data.canceled = true;
-        await saveData(data);
-        
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.get('/video', checkReleaseStatus, (req, res) => {
-    if (res.locals.released) {
-        const data = loadData(); // This will be async but for simplicity
-        res.redirect(`/videos/${data.videoPath}`);
-    } else if (res.locals.canceled) {
-        res.status(404).json({ error: 'Release was canceled' });
+// Secure endpoint to get the video source
+app.get('/api/video-link', (req, res) => {
+    if (Date.now() >= RELEASE_TIME) {
+        // Replace with your actual video URL or file path
+        res.json({ url: 'https://www.w3schools.com/html/mov_bbb.mp4' });
     } else {
-        res.status(403).json({ error: 'Video not yet released' });
+        res.status(403).json({ error: 'Access Denied: Countdown still active.' });
     }
 });
 
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`Video will be released at: ${new Date(RELEASE_TIME).toLocaleString()}`);
 });
